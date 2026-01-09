@@ -12,9 +12,11 @@ class object {
 
  private:
  public:
+  ball();
+  void generateBall();
+  virtual pair<int, int> getPosition() const = 0;
   virtual void collision() const = 0;
   virtual void drawShape() const = 0;
-  virtual pair<int, int> getPosition() const = 0;
   virtual void deleteShape() const = 0;
   virtual void moveObject() const = 0;
   virtual void changeObjectType() const = 0;
