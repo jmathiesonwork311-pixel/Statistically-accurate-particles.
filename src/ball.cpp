@@ -1,69 +1,96 @@
 #include "ball.h"
-long long totalBalls = 0;
+// Static variables, total balls,
+long long ball::totalBalls = 0;
+long long ball::ballId = 0;
 
-void ball::applyGravity() { velocity.second -= 9.8; }
-void ball::changeObjectColorContinuing() {}
-void ball::changeObjectColorTotality() {}
-void ball::collision(ball other) {
+vector<ball*> ball::otherBalls = {};
+#define PI 3.146;
+void ball::applyGravity() { force.second -= 9.8 * 1; }
+void ball::changeObjectType() { return; }
+void ball::changeObjectColorContinuing() const {}
+void ball::changeObjectColorTotality() const {}
+void ball::changePosition(double x, double y) { position = {x, y}; }
+void ball::collision() {
+  const double KN = 100000.0;
+  for (auto x : otherBalls) {
+    if (x->id != id) {
+      pair<double, double> distVector = {x->position.first - position.first,
+                                         x->position.second - position.second};
+      double length =
+          sqrt(pow(distVector.first, 2) + pow(distVector.second, 2));
+      double minimumDist = x->radius + radius;
+      if (length == 0) {
+        length = 0.0001;
+        distVector = {0, 0.0001};
+      }
+      if (minimumDist < length) continue;
+
+      if (minimumDist == 0) minimumDist = 0;
+      double overlap = -length + minimumDist;
+      double fn = KN * overlap * 0.1;
+      pair<double, double> velocity = {x->velocity.first - velocity.first,
+                                       x->velocity.second - velocity.second};
+      pair<double, double> contactNormal = vectorMaths::unitVector(distVector);
+      pair<double, double> collisionForce = {fn * contactNormal.first,
+                                             fn * contactNormal.second};
+      force.first -= collisionForce.first;
+      force.second -= collisionForce.second;
+    }
+  }
   // Learned from OPENGL page
   // https://learnopengl.com/In-Practice/2D-Game/Collisions/Collision-detection
-  pair<double, double> positionOther = other.getPosition();
-  double radiusOther = other.getRadius();
-  bool collidingCircles = sqrt(pow(position.first - positionOther.first, 2) +
-                               pow(position.second - positionOther.second,
-                                   2)) <= radius + radiusOther;
-  if (collidingCircles) {
-  }
   return;
 }
 void ball::updateVelocity() {
-  velocity.second -= 5;
+  velocity.first += (force.first / 1) * 0.016;
+  velocity.second += (force.second / 1) * 0.016;
+  position.first += velocity.first * 0.016;
+  position.second += velocity.second * 0.016;
+  if (position.second < radius - 1)
+    position.second = -1.0 + radius, velocity.second *= -0.1;
+  if (position.first > -radius + 1) {
+    position.first = 1.0 - radius;
+    velocity.first *= -0.1;
+  } else if (position.first < radius - 1)
+    position.first = radius - 1.0, velocity.first *= -0.1;
+
+  force = {0, 0};
   // https://en.wikipedia.org/wiki/Elastic_collision#Two-dimensional
 }
-ball::ball() { generateBall(); }
-void ball::generateBall() {
-  const int segments = 16;
-  const double PI = 3.14159265359;
-  vertices.push_back(0.0f);
-  vertices.push_back(0.0f);
+ball::ball() {
+  // Declare position. Then velcity.
+  position = {0, 0};
+  velocity = {0, 0};
+  // Increment static values.
+  id = ballId++;
+  totalBalls++;
+  otherBalls.push_back(this);
+  drawShape();
+}
+void ball::generateBall() {}
+void ball::deleteShape() {}
+void ball::drawShape() const {
+  // Changing GL_ to GL_POLYGON to create a solid circle
+  glBegin(GL_POLYGON);
+  glColor3f(1.0, 0.0, 0.0);  // Red color
 
-  for (int i = 0; i <= segments; i++) {
-    float angle = 2.0f * PI * i / segments;
-    vertices.push_back(radius * cos(angle));
-    vertices.push_back(radius * sin(angle));
+  int amountOfLines = 40;  // The more lines, the smoother the circle
+
+  for (int i = 0; i < amountOfLines; i++) {
+    // Calculate the angle for this point
+    float angle = 2.0f * 3.1415926f * i / amountOfLines;
+
+    // Calculate x and y based on the angle
+    float x = radius * cosf(angle) + position.first;
+    float y = radius * sinf(angle) + position.second;
+
+    glVertex2f(x, y);
   }
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
 
-  glBindVertexArray(VAO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-               vertices.data(), GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glBindVertexArray(0);
+  glEnd();
+  glFlush();
 }
-void ball::deleteShape() {
-  if (VAO != 0) {
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    VAO = 0;
-    VBO = 0;
-  }
-}
-void ball::drawShape() {
-  glUseProgram(shader);
-
-  glUniform2f(glGetUniformLocation(shader, "offset"), position.first,
-              position.second);
-
-  glBindVertexArray(VAO);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, vertices.size() / 2);
-  glBindVertexArray(0);
-}
-std::pair<double, double> ball::getPosition() { return position; }
+std::pair<double, double> ball::getPosition() const { return position; }
 std::pair<double, double> ball::getVelocity() { return velocity; }
 double ball::getRadius() { return radius; }
 void ball::moveObject() {

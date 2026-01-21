@@ -1,37 +1,43 @@
 #ifndef BALL_H
 #define BALL_H
 
-#include <glad/glad.h>
-
 #include <cmath>
 
+#include "maths.h"
 #include "object.h"
 class ball : public object {
   // Information.
-  double radius = 0.2;
-  // Total balls
+  double radius = 0.005;
+  // Static variables for ID, total balls, and to search for collisions.
   static long long totalBalls;
+  static long long ballId;
+  static vector<ball*> otherBalls;
   unsigned int VAO = 0;
   unsigned int VBO = 0;
-  vector<float> vertices;
+  long long id;
+  pair<double, double> force = {0, 0};
+  pair<double, double> velocity = {0, 0};
+  pair<double, double> position = {0, 0};
 
  public:
   // Getters
-  pair<double, double> getPosition();
+  pair<double, double> getPosition() const override;
   double getRadius();
   ball();
   // Detect Collision
-  void collision(ball other);
+  void changePosition(double x, double y);
+  void collision() override;
   void updateVelocity();
   // Change shapre properties
-  void drawShape();
+  void drawShape() const override;
   void deleteShape();
-  void moveObject();
-  void changeObjectType();
-  void changeObjectColorTotality();
-  void changeObjectColorContinuing();
+  void moveObject() override;
+  void changeObjectType() override;
+  void changeObjectColorTotality() const override;
+  void changeObjectColorContinuing() const override;
   void applyGravity();
   void generateBall();
+  pair<double, double> getVelocity();
   ~ball();
 };
 #endif
